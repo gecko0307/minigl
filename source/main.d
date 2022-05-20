@@ -124,7 +124,6 @@ void main()
         return;
     }
     SDL_Surface* s = SDL_GetWindowSurface(window);
-    SDL_Renderer* renderer = SDL_CreateSoftwareRenderer(s);
     
     Timer timer;
 
