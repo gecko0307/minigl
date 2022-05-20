@@ -13,7 +13,7 @@ mglBindVertexBuffer(0);
 mglBindTexture(0);
 ```
 
-[![Screenshot1](https://github.com/gecko0307/minigl/raw/master/assets/screenshot.jpg)]https://github.com/gecko0307/minigl/raw/master/assets/screenshot.jpg)
+[![Screenshot1](https://github.com/gecko0307/minigl/raw/master/assets/screenshot.jpg)](https://github.com/gecko0307/minigl/raw/master/assets/screenshot.jpg)
 
 ## Features
 - Fully platform-independent. SDL is only used to create a window, you can use MiniGL with any other multimedia framework
