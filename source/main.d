@@ -287,6 +287,20 @@ void main()
         LevelSegment(-4, -1, 1, texCeiling)
     ];
     
+    int mouseX = 0;
+    int mouseY = 0;
+    float mouseSensibility = 0.1f;
+    float pitchLimitMax = 60.0f;
+    float pitchLimitMin = -60.0f;
+    
+    SDL_WarpMouseInWindow(window, videoWidth/2, videoHeight/2);
+    int prevMouseX = videoWidth/2;
+    int prevMouseY = videoHeight/2;
+    
+    float pitch = 0.0f;
+    float turn = 0.0f;
+    Quaternionf baseOrientation = Quaternionf.identity;
+    
     bool[512] keyPressed = false;
     SDL_Event e;
     bool running = true;
@@ -307,19 +321,45 @@ void main()
             {
                 keyPressed[e.key.keysym.scancode] = false;
             }
+            else if (e.type == SDL_MOUSEMOTION)
+            {
+                mouseX = e.motion.x;
+                mouseY = e.motion.y;
+            }
         }
-        
-        if (keyPressed[KEY_LEFT]) camTurn += -3.0f * timer.deltaTime;
-        if (keyPressed[KEY_RIGHT]) camTurn += 3.0f * timer.deltaTime;
-        if (keyPressed[KEY_UP]) camPos += -cameraMatrix.forward  * 2.0f * timer.deltaTime;
-        if (keyPressed[KEY_DOWN]) camPos += cameraMatrix.forward * 2.0f * timer.deltaTime;
         
         if (keyPressed[KEY_RETURN]) {
             SDL_SaveBMP(buf, "frame.bmp");
         }
+        if (keyPressed[KEY_ESCAPE]) {
+            running = false;
+        }
         
-        cameraMatrix = translationMatrix(camPos) * rotationMatrix(1, camTurn);
+        float mouseRelH = (mouseX - prevMouseX) * mouseSensibility;
+        float mouseRelV = (mouseY - prevMouseY) * mouseSensibility;
+        pitch += mouseRelV;
+        turn -= mouseRelH;
+        if (pitch > pitchLimitMax)
+            pitch = pitchLimitMax;
+        else if (pitch < pitchLimitMin)
+            pitch = pitchLimitMin;
+        SDL_WarpMouseInWindow(window, videoWidth/2, videoHeight/2);
+        prevMouseX = videoWidth/2;
+        prevMouseY = videoHeight/2;
+        
+        auto rotPitch = rotationQuaternion(Vector3f(1.0f, 0.0f, 0.0f), degtorad(pitch));
+        auto rotTurn = rotationQuaternion(Vector3f(0.0f, 1.0f, 0.0f), degtorad(turn));
+        Quaternionf cameraOrientation = baseOrientation * rotTurn * rotPitch;
+        
+        cameraMatrix =
+            translationMatrix(camPos) * 
+            cameraOrientation.toMatrix4x4;
         auto mv = cameraMatrix.inverse;
+        
+        if (keyPressed[KEY_W]) camPos += -cameraMatrix.forward  * 2.0f * timer.deltaTime;
+        if (keyPressed[KEY_S]) camPos += cameraMatrix.forward * 2.0f * timer.deltaTime;
+        if (keyPressed[KEY_A]) camPos += -cameraMatrix.right  * 2.0f * timer.deltaTime;
+        if (keyPressed[KEY_D]) camPos += cameraMatrix.right  * 2.0f * timer.deltaTime;
         
         mglClearColor(0.2f, 0.1f, 0.2f, 1.0);
         mglClearDepth(1.0);
