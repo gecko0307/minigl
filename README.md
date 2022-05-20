@@ -1,5 +1,5 @@
 # MiniGL
-Small (<1000 LoC) OpenGL-inspired software rasterizer written in D language just for fun.
+Small (<1000 LoC) OpenGL-inspired old-school software rasterizer written in D language just for fun.
 
 ```d
 mglClearColor(0.0f, 0.0f, 0.0f, 1.0);
