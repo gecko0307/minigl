@@ -4,13 +4,11 @@ Small (<1000 LoC) OpenGL-inspired software rasterizer written in D language just
 ```d
 mglClearColor(0.0f, 0.0f, 0.0f, 1.0);
 mglClearDepth(1.0);
-mglSetProjectionMatrix(pm.arrayof.ptr);
-mglSetModelViewMatrix(mvm.arrayof.ptr);
-mglBindTexture(textureId);
+mglSetProjectionMatrix(pm);
+mglSetModelViewMatrix(mvm);
+mglBindTexture(tex);
 mglBindVertexBuffer(vb);
 mglDrawVertexBuffer();
-mglBindVertexBuffer(0);
-mglBindTexture(0);
 ```
 
 [![Screenshot1](https://github.com/gecko0307/minigl/raw/main/assets/screenshot.jpg)](https://github.com/gecko0307/minigl/raw/main/assets/screenshot.jpg)
