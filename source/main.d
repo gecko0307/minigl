@@ -350,16 +350,17 @@ void main()
         auto rotPitch = rotationQuaternion(Vector3f(1.0f, 0.0f, 0.0f), degtorad(pitch));
         auto rotTurn = rotationQuaternion(Vector3f(0.0f, 1.0f, 0.0f), degtorad(turn));
         Quaternionf cameraOrientation = baseOrientation * rotTurn * rotPitch;
+        auto turnMatrix = rotTurn.toMatrix4x4;
         
         cameraMatrix =
             translationMatrix(camPos) * 
             cameraOrientation.toMatrix4x4;
         auto mv = cameraMatrix.inverse;
         
-        if (keyPressed[KEY_W]) camPos += -cameraMatrix.forward  * 2.0f * timer.deltaTime;
-        if (keyPressed[KEY_S]) camPos += cameraMatrix.forward * 2.0f * timer.deltaTime;
-        if (keyPressed[KEY_A]) camPos += -cameraMatrix.right  * 2.0f * timer.deltaTime;
-        if (keyPressed[KEY_D]) camPos += cameraMatrix.right  * 2.0f * timer.deltaTime;
+        if (keyPressed[KEY_W]) camPos += -turnMatrix.forward  * 2.0f * timer.deltaTime;
+        if (keyPressed[KEY_S]) camPos += turnMatrix.forward * 2.0f * timer.deltaTime;
+        if (keyPressed[KEY_A]) camPos += -turnMatrix.right  * 2.0f * timer.deltaTime;
+        if (keyPressed[KEY_D]) camPos += turnMatrix.right  * 2.0f * timer.deltaTime;
         
         mglClearColor(0.2f, 0.1f, 0.2f, 1.0);
         mglClearDepth(1.0);
