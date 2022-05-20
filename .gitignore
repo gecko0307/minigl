@@ -1,0 +1,15 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/minigl
+minigl.so
+minigl.dylib
+minigl.dll
+minigl.a
+minigl.lib
+minigl-test-*
+*.exe
+*.o
+*.obj
+*.lst

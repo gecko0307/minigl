@@ -1,0 +1,17 @@
+{
+    "name": "minigl",
+    "description": "Tiny software renderer",
+    "homepage": "http://github.com/gecko0307/minigl",
+    "copyright": "Copyright © 2022, Timur Gafarov",
+    "license": "BSL-1.0",
+    "authors": [
+        "Timur Gafarov"
+    ],
+    "dependencies": {
+        "dlib": "~>1.0.0",
+        "bindbc-sdl": "~>1.1.0"
+    },
+    "versions": [
+        "SDL_2014"
+    ]
+}
