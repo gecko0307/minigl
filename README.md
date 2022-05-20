@@ -25,3 +25,5 @@ mglDrawVertexBuffer();
 - Blending modes: alpha, additive, modulate
 - Fog
 - User-defined frame buffers.
+
+No fancy-schmancy modern features like mipmapping or lights! 🤣

@@ -601,9 +601,9 @@ struct MGLState
         Vector3f c2 = cs2.xyz;
         Vector3f c3 = cs3.xyz;
 
-        if (cs1.w <= 0.0f) cs1.w = 0.01f;
-        if (cs2.w <= 0.0f) cs2.w = 0.01f;
-        if (cs3.w <= 0.0f) cs3.w = 0.01f;
+        if (cs1.w < 0.01f) cs1.w = 0.01f;
+        if (cs2.w < 0.01f) cs2.w = 0.01f;
+        if (cs3.w < 0.01f) cs3.w = 0.01f;
 
         Vector3f ndc1 = c1 / cs1.w;
         Vector3f ndc2 = c2 / cs2.w;

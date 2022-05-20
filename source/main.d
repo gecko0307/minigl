@@ -121,6 +121,7 @@ void main()
     if (window is null)
     {
         writeln("Error: failed to create window: ", to!string(SDL_GetError()));
+        return;
     }
     SDL_Surface* s = SDL_GetWindowSurface(window);
     SDL_Renderer* renderer = SDL_CreateSoftwareRenderer(s);
