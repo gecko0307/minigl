@@ -207,7 +207,7 @@ void main()
 
     mglSetClipPlanes(0.1f, 4.0f);
     mglEnable(MGL_TEXTURE);
-    //mglEnable(MGL_BILINEAR_FILTER);
+    //mglEnable(MGL_BILINEAR_FILTER); // Warning! Can be slow
     mglDisable(MGL_BLEND);
     mglEnable(MGL_FOG);
     mglSetFogDistance(0.0f, 4.0f);
