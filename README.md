@@ -8,7 +8,7 @@ mglSetProjectionMatrix(pm);
 mglSetModelViewMatrix(mvm);
 mglBindVertexShader(&vs);
 mglBindPixelShader(&ps);
-mglBindTexture(tex);
+mglBindTexture(0, tex);
 mglBindVertexBuffer(vb);
 mglDrawVertexBuffer();
 ```
@@ -27,6 +27,7 @@ mglDrawVertexBuffer();
 - Blending modes: alpha, additive, modulate
 - Fog
 - Vertex and pixel shaders!
+- Shader-based multitexturing, 32 texture units per pass
 - User-defined frame buffers
 
 No fancy-schmancy modern features like mipmapping or lights 🤣 But they can be implemented on user side, of course.

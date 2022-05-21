@@ -343,12 +343,12 @@ VSOutput defaultVertexShaderFunc(const ref MGLState state, Vector4f coords, Vect
 PSOutput defaultPixelShaderFunc(const ref MGLState state, Vector4f coords, Vector2f uv)
 {
     Color4f pixColor;
-    if (state.options[MGL_TEXTURE] && state.texture)
+    if (state.options[MGL_TEXTURE] && state.texture[0])
     {
         if (state.options[MGL_BILINEAR_FILTER])
-            pixColor = texSampleBilinear(state.texture, uv) * state.color;
+            pixColor = texSampleBilinear(state.texture[0], uv) * state.color;
         else
-            pixColor = texSample(state.texture, uv) * state.color;
+            pixColor = texSample(state.texture[0], uv) * state.color;
     }
     else
         pixColor = state.color;
@@ -373,7 +373,7 @@ struct MGLState
     MGLVertexBuffer* vbCurrent;
 
     Array!MGLTexture textures;
-    MGLTexture* texture;
+    MGLTexture*[32] texture;
 
     Matrix4x4f mvMatrix;
     Matrix4x4f projMatrix;
@@ -624,32 +624,34 @@ struct MGLState
         return cast(uint)textures.length;
     }
 
-    void bindTexture(uint tex)
+    void bindTexture(uint unit, uint tex)
     {
         if (tex == 0)
         {
-            texture = null;
+            texture[unit] = null;
         }
         else if (tex <= textures.length)
-            texture = &textures.data[tex-1];
+            texture[unit] = &textures.data[tex-1];
     }
 
-    void setTexture(ubyte* data, uint width, uint height, uint numChannels)
+    void setTextureData(uint tex, ubyte* data, uint width, uint height, uint numChannels)
     {
-        if (!texture)
+        MGLTexture* t = &textures.data[tex-1];
+        
+        if (!t)
             return;
 
-        if (texture.buffer.length)
-            Delete(texture.buffer);
+        if (t.buffer.length)
+            Delete(t.buffer);
 
-        texture.width = width;
-        texture.height = height;
-        texture.numChannels = numChannels;
-        texture.buffer = New!(ubyte[])(width * height * numChannels);
+        t.width = width;
+        t.height = height;
+        t.numChannels = numChannels;
+        t.buffer = New!(ubyte[])(width * height * numChannels);
 
-        for (uint i = 0; i < texture.buffer.length; i++)
+        for (uint i = 0; i < t.buffer.length; i++)
         {
-            texture.buffer[i] = data[i];
+            t.buffer[i] = data[i];
         }
     }
 
@@ -871,9 +873,14 @@ uint mglAddTexture()
     return state.addTexture();
 }
 
-void mglBindTexture(uint tex)
+void mglSetTextureData(uint tex, ubyte* data, uint width, uint height, uint numChannels)
 {
-    state.bindTexture(tex);
+    return state.setTextureData(tex, data, width, height, numChannels);
+}
+
+void mglBindTexture(uint unit, uint tex)
+{
+    state.bindTexture(unit, tex);
 }
 
 void mglBindVertexShader(VertexShaderEntry vsEntry)
@@ -905,11 +912,6 @@ void mglSetShaderParameter4f(uint index, const(float)* vecPtr)
     p.y = vecPtr[1];
     p.z = vecPtr[2];
     p.w = vecPtr[3];
-}
-
-void mglSetTexture(ubyte* data, uint width, uint height, uint numChannels)
-{
-    return state.setTexture(data, width, height, numChannels);
 }
 
 uint mglAddVertexBuffer()

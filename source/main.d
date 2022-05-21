@@ -95,7 +95,7 @@ float clampf(float v, float mi, float ma)
 PSOut psRed(const ref MGLPipelineState state, Vector4f coords, Vector2f uv)
 {
     float t = state.shaderParameters[0].x;
-    Color4f col = state.textureSample(state.texture, uv) * 
+    Color4f col = state.textureSample(state.texture[0], uv) * 
         lerp(Color4f(1.0f, 1.0f, 1.0f, 1.0f), Color4f(1.0f, 0.0f, 0.0f, 1.0f), t);
     if (state.options[MGL_FOG])
     {
@@ -212,21 +212,15 @@ void main()
 
     auto img0 = loadPNG("textures/wall.png");
     uint texWall = mglAddTexture();
-    mglBindTexture(texWall);
-    mglSetTexture(img0.data.ptr, img0.width, img0.height, img0.channels);
-    mglBindTexture(0);
-
+    mglSetTextureData(texWall, img0.data.ptr, img0.width, img0.height, img0.channels);
+    
     auto img1 = loadPNG("textures/floor.png");
     uint texFloor = mglAddTexture();
-    mglBindTexture(texFloor);
-    mglSetTexture(img1.data.ptr, img1.width, img1.height, img1.channels);
-    mglBindTexture(0);
+    mglSetTextureData(texFloor, img1.data.ptr, img1.width, img1.height, img1.channels);
 
     auto img2 = loadPNG("textures/ceiling.png");
     uint texCeiling = mglAddTexture();
-    mglBindTexture(texCeiling);
-    mglSetTexture(img2.data.ptr, img2.width, img2.height, img2.channels);
-    mglBindTexture(0);
+    mglSetTextureData(texCeiling, img2.data.ptr, img2.width, img2.height, img2.channels);
 
     mglSetClipPlanes(0.1f, 4.0f);
     mglEnable(MGL_TEXTURE);
@@ -403,13 +397,13 @@ void main()
             auto mvPrev = mv;
             mv *= translationMatrix(Vector3f(f.x, f.y, f.z));
             mglSetModelViewMatrix(mv.arrayof.ptr);
-            mglBindTexture(f.textureId);
+            mglBindTexture(0, f.textureId);
             mglBindVertexBuffer(vbFloor);
             mglBindPixelShader(&psRed);
             mglDrawVertexBuffer();
             mglBindPixelShader(null);
             mglBindVertexBuffer(0);
-            mglBindTexture(0);
+            mglBindTexture(0, 0);
             mv = mvPrev;
         }
         
@@ -418,11 +412,11 @@ void main()
             auto mvPrev = mv;
             mv *= translationMatrix(Vector3f(c.x, c.y, c.z));
             mglSetModelViewMatrix(mv.arrayof.ptr);
-            mglBindTexture(c.textureId);
+            mglBindTexture(0, c.textureId);
             mglBindVertexBuffer(vbFloor);
             mglDrawVertexBuffer();
             mglBindVertexBuffer(0);
-            mglBindTexture(0);
+            mglBindTexture(0, 0);
             mv = mvPrev;
         }
         
@@ -432,11 +426,11 @@ void main()
             mv *= translationMatrix(Vector3f(w.x, w.y, w.z));
             mv *= rotationMatrix(1, degtorad(w.angle));
             mglSetModelViewMatrix(mv.arrayof.ptr);
-            mglBindTexture(w.textureId);
+            mglBindTexture(0, w.textureId);
             mglBindVertexBuffer(vbWall);
             mglDrawVertexBuffer();
             mglBindVertexBuffer(0);
-            mglBindTexture(0);
+            mglBindTexture(0, 0);
             mv = mvPrev;
         }
         
