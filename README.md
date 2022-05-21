@@ -29,4 +29,4 @@ mglDrawVertexBuffer();
 - Vertex and pixel shaders!
 - User-defined frame buffers
 
-No fancy-schmancy modern features like mipmapping or lights 🤣
+No fancy-schmancy modern features like mipmapping or lights 🤣 But they can be implemented on user side, of course.
