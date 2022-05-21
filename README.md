@@ -6,6 +6,8 @@ mglClearColor(0.0f, 0.0f, 0.0f, 1.0);
 mglClearDepth(1.0);
 mglSetProjectionMatrix(pm);
 mglSetModelViewMatrix(mvm);
+mglBindVertexShader(&vs);
+mglBindPixelShader(&ps);
 mglBindTexture(tex);
 mglBindVertexBuffer(vb);
 mglDrawVertexBuffer();
@@ -17,13 +19,14 @@ mglDrawVertexBuffer();
 - Fully platform-independent. SDL is only used to create a window, you can use MiniGL with any other multimedia framework
 - The only dependency is [dlib](https://github.com/gecko0307/dlib)
 - Very simple imperative API
-- Basic fixed function pipeline similar to ancient OpenGL
+- Basic graphics pipeline similar to ancient OpenGL
 - Supports only triangles
 - Renders vertex buffers (vertex position buffer + texture coordinate buffer + index buffer)
 - Textures
 - Nearest-neighbour and bilinear sampling (`mglEnable(MGL_BILINEAR_FILTER)`)
 - Blending modes: alpha, additive, modulate
 - Fog
-- User-defined frame buffers.
+- Vertex and pixel shaders!
+- User-defined frame buffers
 
-No fancy-schmancy modern features like mipmapping or lights! 🤣
+No fancy-schmancy modern features like mipmapping or lights 🤣

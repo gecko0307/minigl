@@ -116,7 +116,7 @@ void fbSetPixColor(MGLFrameBuffer* fb, int x, int y, Color4f p)
     if (x >= 0 && y >= 0 && x < fb.width && y < fb.height)
     {
         ubyte* fptr = cast(ubyte*)(fb.colorbuf.ptr + (y * fb.width + x) * 4);
-        enum m = 255.0f; //(2 ^^ 8) - 1;
+        enum m = (2 ^^ 8) - 1;
         ubyte r = cast(ubyte)(p.r * m);
         ubyte g = cast(ubyte)(p.g * m);
         ubyte b = cast(ubyte)(p.b * m);
@@ -239,15 +239,15 @@ void fbBlitColor(MGLFrameBuffer* fb1, MGLFrameBuffer* fb2)
     }
 }
 
-Color4f texSample(MGLTexture* tex, float u, float v)
+Color4f texSample(const(MGLTexture)* tex, Vector2f uv)
 {
     Color4f res = Color4f(1, 1, 1, 1);
 
     if (!tex.buffer.length)
         return res;
 
-    int x = cast(int)(u * tex.width) % tex.width;
-    int y = cast(int)(v * tex.height) % tex.height;
+    int x = cast(int)(uv.x * tex.width) % tex.width;
+    int y = cast(int)(uv.y * tex.height) % tex.height;
     if (x < 0) x += tex.width;
     if (y < 0) y += tex.height;
 
@@ -260,7 +260,7 @@ Color4f texSample(MGLTexture* tex, float u, float v)
     return res;
 }
 
-Color4f texSampleBilinear(MGLTexture* tex, float tcu, float tcv)
+Color4f texSampleBilinear(const(MGLTexture)* tex, Vector2f uv)
 {
     Color4f res = Color4f(1, 1, 1, 1);
 
@@ -271,8 +271,8 @@ Color4f texSampleBilinear(MGLTexture* tex, float tcu, float tcv)
     int widthSH = (tex.width<<shift);
     int heightSH = (tex.height<<shift);
     
-    int u = cast(int)(tcu * widthSH) % widthSH;
-    int v = cast(int)(tcv * heightSH) % heightSH;
+    int u = cast(int)(uv.x * widthSH) % widthSH;
+    int v = cast(int)(uv.y * heightSH) % heightSH;
 
     if (u < 0) u += widthSH;
     if (v < 0) v += heightSH;
@@ -282,10 +282,10 @@ Color4f texSampleBilinear(MGLTexture* tex, float tcu, float tcv)
     int u1 = (u0 + 1) % tex.width;
     int v1 = (v0 + 1) % tex.height;
     
-    ubyte* c00 = (tex.buffer.ptr + (u0 + tex.width * v0) * tex.numChannels);
-    ubyte* c10 = (tex.buffer.ptr + (u1 + tex.width * v0) * tex.numChannels);
-    ubyte* c01 = (tex.buffer.ptr + (u0 + tex.width * v1) * tex.numChannels);
-    ubyte* c11 = (tex.buffer.ptr + (u1 + tex.width * v1) * tex.numChannels);
+    const(ubyte)* c00 = (tex.buffer.ptr + (u0 + tex.width * v0) * tex.numChannels);
+    const(ubyte)* c10 = (tex.buffer.ptr + (u1 + tex.width * v0) * tex.numChannels);
+    const(ubyte)* c01 = (tex.buffer.ptr + (u0 + tex.width * v1) * tex.numChannels);
+    const(ubyte)* c11 = (tex.buffer.ptr + (u1 + tex.width * v1) * tex.numChannels);
     
     int uoff = u & ((1 << shift) - 1);
     int voff = v & ((1 << shift) - 1);
@@ -319,6 +319,51 @@ Color4f texSampleBilinear(MGLTexture* tex, float tcu, float tcv)
     return res;
 }
 
+struct VSOutput
+{
+    Vector4f position;
+    Vector2f texcoord;
+}
+
+struct FSOutput
+{
+    Color4f color;
+}
+
+alias VertexShaderFunc = VSOutput function(const ref MGLState state, Vector4f coords, Vector2f uv);
+alias PixelShaderFunc = FSOutput function(const ref MGLState state, Vector4f coords, Vector2f uv);
+
+VSOutput defaultVertexShaderFunc(const ref MGLState state, Vector4f coords, Vector2f uv)
+{
+    Vector4f pos = coords * state.mvpMatrix;
+    Vector2f texcoord = uv;
+    return VSOutput(pos, texcoord);
+}
+
+FSOutput defaultPixelShaderFunc(const ref MGLState state, Vector4f coords, Vector2f uv)
+{
+    Color4f pixColor;
+    if (state.options[MGL_TEXTURE] && state.texture)
+    {
+        if (state.options[MGL_BILINEAR_FILTER])
+            pixColor = texSampleBilinear(state.texture, uv) * state.color;
+        else
+            pixColor = texSample(state.texture, uv) * state.color;
+    }
+    else
+        pixColor = state.color;
+    
+    if (state.options[MGL_FOG])
+    {
+        float fogDistance = coords.w;
+        float fogFactor = clampf((state.fogEnd - fogDistance) / (state.fogEnd - state.fogStart), 0.0f, 1.0f);
+        Color4f fogColor = state.fogColor;
+        pixColor = lerp(fogColor, pixColor, fogFactor);
+    }
+    
+    return FSOutput(pixColor);
+}
+
 struct MGLState
 {
     Array!MGLFrameBuffer framebuffers;
@@ -328,10 +373,11 @@ struct MGLState
     MGLVertexBuffer* vbCurrent;
 
     Array!MGLTexture textures;
-    MGLTexture* texCurrent;
+    MGLTexture* texture;
 
     Matrix4x4f mvMatrix;
     Matrix4x4f projMatrix;
+    Matrix4x4f mvpMatrix;
 
     Color4f color;
 
@@ -344,6 +390,18 @@ struct MGLState
     float fogStart = 0.0f;
     float fogEnd = 1.0f;
     Color4f fogColor = Color4f(0, 0, 0, 1);
+    
+    VertexShaderFunc vertexShaderFunc;
+    PixelShaderFunc pixelShaderFunc;
+    
+    Vector4f[32] shaderParameters;
+    
+    Color4f textureSample(const(MGLTexture)* tex, Vector2f uv) const
+    {
+        return options[MGL_BILINEAR_FILTER]?
+            texSampleBilinear(tex, uv) :
+            texSample(tex, uv);
+    }
 
     void release()
     {
@@ -385,8 +443,12 @@ struct MGLState
 
         mvMatrix = Matrix4x4f.identity;
         projMatrix = Matrix4x4f.identity;
+        mvpMatrix = Matrix4x4f.identity;
 
         color = Color4f(1.0f, 1.0f, 1.0f, 1.0f);
+        
+        vertexShaderFunc = &defaultVertexShaderFunc;
+        pixelShaderFunc = &defaultPixelShaderFunc;
     }
 
     uint addFrameBuffer()
@@ -529,6 +591,8 @@ struct MGLState
 
         if (!vbCurrent.vertexbuf.length)
             return;
+        
+        mvpMatrix = projMatrix * mvMatrix;
 
         foreach(index; vbCurrent.indexbuf)
         {
@@ -564,38 +628,44 @@ struct MGLState
     {
         if (tex == 0)
         {
-            texCurrent = null;
+            texture = null;
         }
         else if (tex <= textures.length)
-            texCurrent = &textures.data[tex-1];
+            texture = &textures.data[tex-1];
     }
 
     void setTexture(ubyte* data, uint width, uint height, uint numChannels)
     {
-        if (!texCurrent)
+        if (!texture)
             return;
 
-        if (texCurrent.buffer.length)
-            Delete(texCurrent.buffer);
+        if (texture.buffer.length)
+            Delete(texture.buffer);
 
-        texCurrent.width = width;
-        texCurrent.height = height;
-        texCurrent.numChannels = numChannels;
-        texCurrent.buffer = New!(ubyte[])(width * height * numChannels);
+        texture.width = width;
+        texture.height = height;
+        texture.numChannels = numChannels;
+        texture.buffer = New!(ubyte[])(width * height * numChannels);
 
-        for (uint i = 0; i < texCurrent.buffer.length; i++)
+        for (uint i = 0; i < texture.buffer.length; i++)
         {
-            texCurrent.buffer[i] = data[i];
+            texture.buffer[i] = data[i];
         }
     }
 
     void drawTriangle(MGLTriangle* tri)
     {
-        auto mvp = projMatrix * mvMatrix;
-
-        Vector4f cs1 = tri.pos[0] * mvp;
-        Vector4f cs2 = tri.pos[1] * mvp;
-        Vector4f cs3 = tri.pos[2] * mvp;
+        VSOutput v1 = vertexShaderFunc(this, tri.pos[0], tri.texcoord[0].xy);
+        VSOutput v2 = vertexShaderFunc(this, tri.pos[1], tri.texcoord[1].xy);
+        VSOutput v3 = vertexShaderFunc(this, tri.pos[2], tri.texcoord[2].xy);
+        Vector4f cs1 = v1.position;
+        Vector4f cs2 = v2.position;
+        Vector4f cs3 = v3.position;
+        
+        Vector2f[3] tcs;
+        tcs[0] = v1.texcoord;
+        tcs[1] = v2.texcoord;
+        tcs[2] = v3.texcoord;
 
         Vector3f c1 = cs1.xyz;
         Vector3f c2 = cs2.xyz;
@@ -617,11 +687,6 @@ struct MGLState
         pts[0] = Vector3f(floor(w1.x), floor(w1.y), w1.z);
         pts[1] = Vector3f(floor(w2.x), floor(w2.y), w2.z);
         pts[2] = Vector3f(floor(w3.x), floor(w3.y), w3.z);
-
-        Vector2f[3] tcs;
-        tcs[0] = tri.texcoord[0].xy;
-        tcs[1] = tri.texcoord[1].xy;
-        tcs[2] = tri.texcoord[2].xy;
 
         float[3] clipw;
         clipw[0] = cs1.w;
@@ -654,7 +719,7 @@ struct MGLState
     
         for (px=bboxmin.x; px<=bboxmax.x; px++)
         for (py=bboxmin.y; py<=bboxmax.y; py++)
-        { 
+        {
             Vector3f bc = barycentric(pts, Vector3f(px, py, pz));
             if (bc.x < 0 || bc.y < 0 || bc.z < 0)
                 continue;
@@ -683,24 +748,8 @@ struct MGLState
             {
                 if (pz < fbGetPixelDepth(fbCurrent, xcoord, ycoord))
                 {
-                    Color4f pixColor;
-                    
-                    if (options[MGL_TEXTURE] && texCurrent)
-                    {
-                        if (options[MGL_BILINEAR_FILTER])
-                            pixColor = texSampleBilinear(texCurrent, u, v) * color;
-                        else
-                            pixColor = texSample(texCurrent, u, v) * color;
-                    }
-                    else
-                        pixColor = color;
-                    
-                    if (options[MGL_FOG])
-                    {
-                        float fogDistance = iw;
-                        float fogFactor = clampf((fogEnd - fogDistance) / (fogEnd - fogStart), 0.0f, 1.0f);
-                        pixColor = lerp(fogColor, pixColor, fogFactor);
-                    }
+                    FSOutput fragment = pixelShaderFunc(this, Vector4f(px, py, pz, iw), Vector2f(u, v));
+                    Color4f pixColor = fragment.color;
                     
                     if (options[MGL_BLEND])
                     {
@@ -734,6 +783,13 @@ enum MGL_FOG = 3;
 enum MGL_BLEND_ALPHA = 0;
 enum MGL_BLEND_ADDITIVE = 1;
 enum MGL_BLEND_MODULATE = 2;
+
+alias VSOut = VSOutput;
+alias FSOut = FSOutput;
+alias MGLPipelineState = MGLState;
+
+alias VertexShaderEntry = VSOut function(const ref MGLPipelineState state, Vector4f coords, Vector2f uv);
+alias PixelShaderEntry = FSOut function(const ref MGLPipelineState state, Vector4f coords, Vector2f uv);
 
 void mglInit(uint fwidth, uint fheight)
 {
@@ -818,6 +874,37 @@ uint mglAddTexture()
 void mglBindTexture(uint tex)
 {
     state.bindTexture(tex);
+}
+
+void mglBindVertexShader(VertexShaderEntry vsEntry)
+{
+    if (vsEntry is null)
+        state.vertexShaderFunc = &defaultVertexShaderFunc;
+    else
+        state.vertexShaderFunc = vsEntry;
+}
+
+void mglBindPixelShader(PixelShaderEntry psEntry)
+{
+    if (psEntry is null)
+        state.pixelShaderFunc = &defaultPixelShaderFunc;
+    else
+        state.pixelShaderFunc = psEntry;
+}
+
+void mglSetShaderParameter1f(uint index, float v)
+{
+    auto p = &state.shaderParameters[index];
+    p.x = v;
+}
+
+void mglSetShaderParameter4f(uint index, const(float)* vecPtr)
+{
+    auto p = &state.shaderParameters[index];
+    p.x = vecPtr[0];
+    p.y = vecPtr[1];
+    p.z = vecPtr[2];
+    p.w = vecPtr[3];
 }
 
 void mglSetTexture(ubyte* data, uint width, uint height, uint numChannels)

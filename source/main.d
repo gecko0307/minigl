@@ -30,6 +30,7 @@ module main;
 import std.stdio;
 import std.conv;
 import std.string;
+import std.math;
 import dlib.math;
 import dlib.image;
 
@@ -82,6 +83,28 @@ struct LevelSegment
     float z;
     uint textureId;
     float angle;
+}
+
+float clampf(float v, float mi, float ma)
+{
+    if (v < mi) return mi;
+    else if (v > ma) return ma;
+    else return v; 
+}
+
+FSOut psRed(const ref MGLPipelineState state, Vector4f coords, Vector2f uv)
+{
+    float t = state.shaderParameters[0].x;
+    Color4f col = state.textureSample(state.texture, uv) * 
+        lerp(Color4f(1.0f, 1.0f, 1.0f, 1.0f), Color4f(1.0f, 0.0f, 0.0f, 1.0f), t);
+    if (state.options[MGL_FOG])
+    {
+        float fogDistance = coords.w;
+        float fogFactor = clampf((state.fogEnd - fogDistance) / (state.fogEnd - state.fogStart), 0.0f, 1.0f);
+        Color4f fogColor = state.fogColor;
+        col = lerp(fogColor, col, fogFactor);
+    }
+    return FSOut(col);
 }
 
 void main()
@@ -301,6 +324,9 @@ void main()
     float turn = 0.0f;
     Quaternionf baseOrientation = Quaternionf.identity;
     
+    float t = 0.0f;
+    float time = 0.0f;
+    
     bool[512] keyPressed = false;
     SDL_Event e;
     bool running = true;
@@ -367,6 +393,11 @@ void main()
         
         mglSetModelViewMatrix(mv.arrayof.ptr);
         
+        time += timer.deltaTime;
+        if (time >= 2.0f * PI) time = 0.0f;
+        t = (sin(time * 4.0f) + 1.0f) * 0.5f;
+        mglSetShaderParameter1f(0, t);
+        
         foreach(ref f; floors)
         {
             auto mvPrev = mv;
@@ -374,7 +405,9 @@ void main()
             mglSetModelViewMatrix(mv.arrayof.ptr);
             mglBindTexture(f.textureId);
             mglBindVertexBuffer(vbFloor);
+            mglBindPixelShader(&psRed);
             mglDrawVertexBuffer();
+            mglBindPixelShader(null);
             mglBindVertexBuffer(0);
             mglBindTexture(0);
             mv = mvPrev;
