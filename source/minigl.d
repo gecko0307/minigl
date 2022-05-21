@@ -325,13 +325,13 @@ struct VSOutput
     Vector2f texcoord;
 }
 
-struct FSOutput
+struct PSOutput
 {
     Color4f color;
 }
 
 alias VertexShaderFunc = VSOutput function(const ref MGLState state, Vector4f coords, Vector2f uv);
-alias PixelShaderFunc = FSOutput function(const ref MGLState state, Vector4f coords, Vector2f uv);
+alias PixelShaderFunc = PSOutput function(const ref MGLState state, Vector4f coords, Vector2f uv);
 
 VSOutput defaultVertexShaderFunc(const ref MGLState state, Vector4f coords, Vector2f uv)
 {
@@ -340,7 +340,7 @@ VSOutput defaultVertexShaderFunc(const ref MGLState state, Vector4f coords, Vect
     return VSOutput(pos, texcoord);
 }
 
-FSOutput defaultPixelShaderFunc(const ref MGLState state, Vector4f coords, Vector2f uv)
+PSOutput defaultPixelShaderFunc(const ref MGLState state, Vector4f coords, Vector2f uv)
 {
     Color4f pixColor;
     if (state.options[MGL_TEXTURE] && state.texture)
@@ -361,7 +361,7 @@ FSOutput defaultPixelShaderFunc(const ref MGLState state, Vector4f coords, Vecto
         pixColor = lerp(fogColor, pixColor, fogFactor);
     }
     
-    return FSOutput(pixColor);
+    return PSOutput(pixColor);
 }
 
 struct MGLState
@@ -748,7 +748,7 @@ struct MGLState
             {
                 if (pz < fbGetPixelDepth(fbCurrent, xcoord, ycoord))
                 {
-                    FSOutput fragment = pixelShaderFunc(this, Vector4f(px, py, pz, iw), Vector2f(u, v));
+                    PSOutput fragment = pixelShaderFunc(this, Vector4f(px, py, pz, iw), Vector2f(u, v));
                     Color4f pixColor = fragment.color;
                     
                     if (options[MGL_BLEND])
@@ -785,11 +785,11 @@ enum MGL_BLEND_ADDITIVE = 1;
 enum MGL_BLEND_MODULATE = 2;
 
 alias VSOut = VSOutput;
-alias FSOut = FSOutput;
+alias PSOut = PSOutput;
 alias MGLPipelineState = MGLState;
 
 alias VertexShaderEntry = VSOut function(const ref MGLPipelineState state, Vector4f coords, Vector2f uv);
-alias PixelShaderEntry = FSOut function(const ref MGLPipelineState state, Vector4f coords, Vector2f uv);
+alias PixelShaderEntry = PSOut function(const ref MGLPipelineState state, Vector4f coords, Vector2f uv);
 
 void mglInit(uint fwidth, uint fheight)
 {

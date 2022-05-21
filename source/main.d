@@ -92,7 +92,7 @@ float clampf(float v, float mi, float ma)
     else return v; 
 }
 
-FSOut psRed(const ref MGLPipelineState state, Vector4f coords, Vector2f uv)
+PSOut psRed(const ref MGLPipelineState state, Vector4f coords, Vector2f uv)
 {
     float t = state.shaderParameters[0].x;
     Color4f col = state.textureSample(state.texture, uv) * 
@@ -104,7 +104,7 @@ FSOut psRed(const ref MGLPipelineState state, Vector4f coords, Vector2f uv)
         Color4f fogColor = state.fogColor;
         col = lerp(fogColor, col, fogFactor);
     }
-    return FSOut(col);
+    return PSOut(col);
 }
 
 void main()
