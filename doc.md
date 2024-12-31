@@ -6,7 +6,7 @@ void mglInit(uint fwidth, uint fheight)
 ```
 Releases and recreates the state with given frame width and height. This function deletes all previously created frame buffers, vertex buffers and textures.
 
-`fwidth`, `fheight` - width and height of a default (0) frame buffer. These should match the dimensions of 
+`fwidth`, `fheight` - width and height of the default (0) frame buffer. These should match the dimensions of an output surface, if you blit the default frame buffer to it.
 
 ## mglRelease
 ```d
@@ -40,21 +40,33 @@ Disables a state option.
 ```d
 void mglSetBlendMode(uint bm)
 ```
+Sets the blend mode used for the next draw calls.
+
+`bm` - one of the predefined constants: `MGL_BLEND_ALPHA`, `MGL_BLEND_ADDITIVE`, `MGL_BLEND_MODULATE`.
 
 ## mglSetClipPlanes
 ```d
 void mglSetClipPlanes(float znear, float zfar)
 ```
+Sets depth clipping planes for the next draw calls. Any pixel nearer than `znear` or further away than `zfar` will not be drawn.
+
+`znear`, `zfar` - near and far Z clipping planes.
 
 ## mglSetFogDistance
 ```d
 void mglSetFogDistance(float start, float end)
 ```
+Sets fog distance range for the next draw calls. A pixel in this depth range will gradully mix with the fog color. A custom pixel shader overrides this behaviour and should reimplement it, if needed.
+
+`start`, `end` - start and end of the fog range.
 
 ## mglSetFogColor
 ```d
 void mglSetFogColor(float r, float g, float b, float a)
 ```
+Sets fog color for the next draw calls.
+
+`r`, `g`, `b`, `a` - color components.
 
 ## mglClearColor
 ```d
