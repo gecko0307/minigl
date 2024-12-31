@@ -355,10 +355,12 @@ PSOutput defaultPixelShaderFunc(const ref MGLState state, Vector4f coords, Vecto
     
     if (state.options[MGL_FOG])
     {
+        float alpha = pixColor.a;
         float fogDistance = coords.w;
         float fogFactor = clampf((state.fogEnd - fogDistance) / (state.fogEnd - state.fogStart), 0.0f, 1.0f);
         Color4f fogColor = state.fogColor;
         pixColor = lerp(fogColor, pixColor, fogFactor);
+        pixColor.a = alpha;
     }
     
     return PSOutput(pixColor);
@@ -379,7 +381,7 @@ struct MGLState
     Matrix4x4f projMatrix;
     Matrix4x4f mvpMatrix;
 
-    Color4f color;
+    Color4f color = Color4f(1.0f, 1.0f, 1.0f, 1.0f);
 
     bool[10] options;
     uint blendMode = MGL_BLEND_ALPHA;
@@ -389,7 +391,7 @@ struct MGLState
 
     float fogStart = 0.0f;
     float fogEnd = 1.0f;
-    Color4f fogColor = Color4f(0, 0, 0, 1);
+    Color4f fogColor = Color4f(0.0f, 0.0f, 0.0f, 1.0f);
     
     VertexShaderFunc vertexShaderFunc;
     PixelShaderFunc pixelShaderFunc;

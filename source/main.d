@@ -221,13 +221,17 @@ void main()
     auto img2 = loadPNG("textures/ceiling.png");
     uint texCeiling = mglAddTexture();
     mglSetTextureData(texCeiling, img2.data.ptr, img2.width, img2.height, img2.channels);
+    
+    auto img3 = loadPNG("textures/fireball.png");
+    uint texFireball = mglAddTexture();
+    mglSetTextureData(texFireball, img3.data.ptr, img3.width, img3.height, img3.channels);
 
-    mglSetClipPlanes(0.1f, 4.0f);
+    mglSetClipPlanes(0.0f, 5.0f);
     mglEnable(MGL_TEXTURE);
     //mglEnable(MGL_BILINEAR_FILTER); // Warning! Can be slow
     mglDisable(MGL_BLEND);
     mglEnable(MGL_FOG);
-    mglSetFogDistance(0.0f, 4.0f);
+    mglSetFogDistance(1.0f, 5.0f);
     mglSetFogColor(0.2f, 0.1f, 0.2f, 1.0f);
 
     LevelSegment[] floors = [
@@ -318,6 +322,51 @@ void main()
     float turn = 0.0f;
     Quaternionf baseOrientation = Quaternionf.identity;
     
+    struct Fireball
+    {
+        Vector3f position;
+        Vector3f velocity;
+        bool visible;
+        float time;
+    };
+    
+    //Vector3f fireballPosition = Vector3f(0.0f, -0.15f, 0.0f);
+    
+    Vector3f fireballScale = Vector3f(0.5f, 0.5f, 0.5f);
+    float fireballPosY = -0.05f;
+    float fireballSpeed = 8.0f;
+    float fireballLifetime = 1.5f;
+    
+    Fireball[5] fireballs = [
+        { position: Vector3f(0.0f, fireballPosY, 0.0f), velocity: Vector3f(0.0f, 0.0f, 0.0f), visible: false, time: 0.0f },
+        { position: Vector3f(0.0f, fireballPosY, 0.0f), velocity: Vector3f(0.0f, 0.0f, 0.0f), visible: false, time: 0.0f },
+        { position: Vector3f(0.0f, fireballPosY, 0.0f), velocity: Vector3f(0.0f, 0.0f, 0.0f), visible: false, time: 0.0f },
+        { position: Vector3f(0.0f, fireballPosY, 0.0f), velocity: Vector3f(0.0f, 0.0f, 0.0f), visible: false, time: 0.0f },
+        { position: Vector3f(0.0f, fireballPosY, 0.0f), velocity: Vector3f(0.0f, 0.0f, 0.0f), visible: false, time: 0.0f }
+    ];
+    
+    void fire(Vector3f camDir)
+    {
+        foreach(ref f; fireballs)
+        {
+            if (!f.visible)
+            {
+                f.position = camPos;
+                f.position.y = fireballPosY;
+                f.visible = true;
+                f.time = 0.0f;
+                f.velocity = -camDir * fireballSpeed;
+                break;
+            }
+        }
+    }
+    
+    bool canFire = true;
+    
+    Quaternionf cameraOrientation = Quaternionf.identity;
+    Quaternionf cameraOrientationX = Quaternionf.identity;
+    Quaternionf cameraOrientationY = Quaternionf.identity;
+    
     float t = 0.0f;
     float time = 0.0f;
     
@@ -346,6 +395,10 @@ void main()
                 mouseX = e.motion.x;
                 mouseY = e.motion.y;
             }
+            else if (e.type == SDL_MOUSEBUTTONDOWN)
+            {
+                fire(cameraOrientationY.rotate(Vector3f(0.0f, 0.0f, 1.0f)));
+            }
         }
         
         if (keyPressed[KEY_RETURN]) {
@@ -367,14 +420,16 @@ void main()
         prevMouseX = videoWidth/2;
         prevMouseY = videoHeight/2;
         
-        auto rotPitch = rotationQuaternion(Vector3f(1.0f, 0.0f, 0.0f), degtorad(pitch));
-        auto rotTurn = rotationQuaternion(Vector3f(0.0f, 1.0f, 0.0f), degtorad(turn));
-        Quaternionf cameraOrientation = baseOrientation * rotTurn * rotPitch;
-        auto turnMatrix = rotTurn.toMatrix4x4;
+        cameraOrientationX = rotationQuaternion(Vector3f(1.0f, 0.0f, 0.0f), degtorad(pitch));
+        cameraOrientationY = rotationQuaternion(Vector3f(0.0f, 1.0f, 0.0f), degtorad(turn));
+        cameraOrientation = baseOrientation * cameraOrientationY * cameraOrientationX;
+        auto turnMatrix = cameraOrientationY.toMatrix4x4;
+        
+        auto invViewOrientationMatrix = cameraOrientation.toMatrix4x4;
         
         cameraMatrix =
             translationMatrix(camPos) * 
-            cameraOrientation.toMatrix4x4;
+            invViewOrientationMatrix;
         auto mv = cameraMatrix.inverse;
         
         if (keyPressed[KEY_W]) camPos += -turnMatrix.forward  * 2.0f * timer.deltaTime;
@@ -432,6 +487,34 @@ void main()
             mglBindVertexBuffer(0);
             mglBindTexture(0, 0);
             mv = mvPrev;
+        }
+        
+        foreach(ref f; fireballs)
+        {
+            if (f.visible)
+            {
+                f.position += f.velocity * timer.deltaTime;
+                f.time += timer.deltaTime;
+                if (f.time >= fireballLifetime)
+                {
+                    f.visible = false;
+                }
+                
+                auto mvPrev = mv;
+                mv *= translationMatrix(f.position);
+                mv *= invViewOrientationMatrix;
+                mv *= scaleMatrix(fireballScale);
+                mglSetModelViewMatrix(mv.arrayof.ptr);
+                mglBindTexture(0, texFireball);
+                mglBindVertexBuffer(vbWall);
+                mglEnable(MGL_BLEND);
+                mglSetBlendMode(MGL_BLEND_ALPHA);
+                mglDrawVertexBuffer();
+                mglDisable(MGL_BLEND);
+                mglBindVertexBuffer(0);
+                mglBindTexture(0, 0);
+                mv = mvPrev;
+            }
         }
         
         mglBlitFrameBuffer(fbScaled, 0);
