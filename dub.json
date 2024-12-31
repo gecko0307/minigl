@@ -8,7 +8,7 @@
         "Timur Gafarov"
     ],
     "dependencies": {
-        "dlib": "~>1.0.0",
+        "dlib": "~>1.3.0",
         "bindbc-sdl": "~>1.1.0"
     },
     "versions": [
