@@ -414,6 +414,8 @@ void main()
     Quaternionf cameraOrientationX = Quaternionf.identity;
     Quaternionf cameraOrientationY = Quaternionf.identity;
     
+    SDL_ShowCursor(0);
+    
     float t = 0.0f;
     float time = 0.0f;
     
@@ -481,10 +483,10 @@ void main()
         auto mv = cameraMatrix.inverse;
         
         // Movement controls
-        if (keyPressed[KEY_W]) camPos += -turnMatrix.forward  * 2.0f * timer.deltaTime;
-        if (keyPressed[KEY_S]) camPos += turnMatrix.forward * 2.0f * timer.deltaTime;
-        if (keyPressed[KEY_A]) camPos += -turnMatrix.right  * 2.0f * timer.deltaTime;
-        if (keyPressed[KEY_D]) camPos += turnMatrix.right  * 2.0f * timer.deltaTime;
+        if (keyPressed[KEY_W]) camPos += -turnMatrix.forward  * 1.5f * timer.deltaTime;
+        if (keyPressed[KEY_S]) camPos += turnMatrix.forward * 1.5f * timer.deltaTime;
+        if (keyPressed[KEY_A]) camPos += -turnMatrix.right  * 1.5f * timer.deltaTime;
+        if (keyPressed[KEY_D]) camPos += turnMatrix.right  * 1.5f * timer.deltaTime;
         
         // Collision detection with walls
         foreach(ref wall; walls)
@@ -494,6 +496,16 @@ void main()
             {
                 Vector2f v = col.n * col.depth;
                 camPos += Vector3f(v.x, 0.0f, v.y);
+            }
+            
+            foreach(ref f; fireballs)
+            {
+                Collision fcol = checkCircleCollisionWithWall(f.position, 0.2f, wall);
+                if (fcol.fact)
+                {
+                    f.visible = false;
+                    break;
+                }
             }
         }
         
