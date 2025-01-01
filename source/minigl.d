@@ -449,6 +449,13 @@ struct MGLState
 
         color = Color4f(1.0f, 1.0f, 1.0f, 1.0f);
         
+        options[MGL_TEXTURE] = false;
+        options[MGL_BLEND] = false;
+        options[MGL_BILINEAR_FILTER] = false;
+        options[MGL_FOG] = false;
+        options[MGL_DEPTH_TEST] = true;
+        options[MGL_DEPTH_WRITE] = true;
+        
         vertexShaderFunc = &defaultVertexShaderFunc;
         pixelShaderFunc = &defaultPixelShaderFunc;
     }
@@ -748,28 +755,27 @@ struct MGLState
             u *= iw;
             v *= iw;
 
-            if (pz > 0.0f && iw > znear && iw < zfar)
+            if (!options[MGL_DEPTH_TEST] || (pz < fbGetPixelDepth(fbCurrent, xcoord, ycoord) && pz > 0.0f && iw > znear && iw < zfar))
             {
-                if (pz < fbGetPixelDepth(fbCurrent, xcoord, ycoord))
+                PSOutput fragment = pixelShaderFunc(this, Vector4f(px, py, pz, iw), Vector2f(u, v));
+                Color4f pixColor = fragment.color;
+                
+                if (options[MGL_BLEND])
                 {
-                    PSOutput fragment = pixelShaderFunc(this, Vector4f(px, py, pz, iw), Vector2f(u, v));
-                    Color4f pixColor = fragment.color;
-                    
-                    if (options[MGL_BLEND])
-                    {
-                        if (blendMode == MGL_BLEND_ALPHA)
-                            fbAlphaPixColor(fbCurrent, xcoord, ycoord, pixColor);
-                        else if (blendMode == MGL_BLEND_ADDITIVE)
-                            fbAddPixColor(fbCurrent, xcoord, ycoord, pixColor);
-                        else if (blendMode == MGL_BLEND_MODULATE)
-                            fbModulatePixColor(fbCurrent, xcoord, ycoord, pixColor);
-                        else
-                            fbSetPixColor(fbCurrent, xcoord, ycoord, pixColor);
-                    }
+                    if (blendMode == MGL_BLEND_ALPHA)
+                        fbAlphaPixColor(fbCurrent, xcoord, ycoord, pixColor);
+                    else if (blendMode == MGL_BLEND_ADDITIVE)
+                        fbAddPixColor(fbCurrent, xcoord, ycoord, pixColor);
+                    else if (blendMode == MGL_BLEND_MODULATE)
+                        fbModulatePixColor(fbCurrent, xcoord, ycoord, pixColor);
                     else
                         fbSetPixColor(fbCurrent, xcoord, ycoord, pixColor);
-                    fbSetPixelDepth(fbCurrent, xcoord, ycoord, pz);
                 }
+                else
+                    fbSetPixColor(fbCurrent, xcoord, ycoord, pixColor);
+                
+                if (options[MGL_DEPTH_WRITE])
+                    fbSetPixelDepth(fbCurrent, xcoord, ycoord, pz);
             }
         } 
     } 
@@ -783,6 +789,8 @@ enum MGL_TEXTURE = 0;
 enum MGL_BLEND = 1;
 enum MGL_BILINEAR_FILTER = 2;
 enum MGL_FOG = 3;
+enum MGL_DEPTH_TEST = 4;
+enum MGL_DEPTH_WRITE = 5;
 
 enum MGL_BLEND_ALPHA = 0;
 enum MGL_BLEND_ADDITIVE = 1;

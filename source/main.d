@@ -210,8 +210,9 @@ void main()
     Matrix4x4f cameraMatrix = Matrix4x4f.identity;
 
     float aspect = cast(float)(realWidth)/cast(float)(realHeight);
-    auto projectionMatrix = perspectiveMatrix(80.0f, aspect, 0.01f, 10.0f);
-    mglSetProjectionMatrix(projectionMatrix.arrayof.ptr);
+    auto perspective = perspectiveMatrix(80.0f, aspect, 0.01f, 10.0f);
+    
+    auto ortho = orthoMatrix(0.0f, realWidth, realHeight, 0.0f, -10.0f, 10.0f);
 
     float[] vertsWall = [
         0.5,  0, 0,
@@ -257,6 +258,29 @@ void main()
     mglSetVertexBufferPositions(vertsFloor.ptr, 3, cast(uint)(vertsFloor.length / 3));
     mglSetVertexBufferTexcoords(texsFloor.ptr, 2, cast(uint)(texsFloor.length / 2));
     mglSetVertexBufferIndices(indicesFloor.ptr, cast(uint)(indicesFloor.length / 3));
+    mglBindVertexBuffer(0);
+    
+    float[] vertsQuad = [
+        0.0, 0.0, 0.0,
+        1.0, 0.0, 0.0,
+        1.0, 1.0, 0.0,
+        0.0, 1.0, 0.0
+    ];
+    float[] texsQuad = [
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0
+    ];
+    uint[] indicesQuad = [
+        0, 1, 2,
+        0, 2, 3
+    ];
+    uint vbQuad = mglAddVertexBuffer();
+    mglBindVertexBuffer(vbQuad);
+    mglSetVertexBufferPositions(vertsQuad.ptr, 3, cast(uint)(vertsQuad.length / 3));
+    mglSetVertexBufferTexcoords(texsQuad.ptr, 2, cast(uint)(texsQuad.length / 2));
+    mglSetVertexBufferIndices(indicesQuad.ptr, cast(uint)(indicesQuad.length / 3));
     mglBindVertexBuffer(0);
 
     auto img0 = loadPNG("textures/wall.png");
@@ -510,14 +534,20 @@ void main()
         }
         
         mglClearColor(0.2f, 0.1f, 0.2f, 1.0);
-        mglClearDepth(1.0);
+        mglClearDepth(1.0f);
         
+        mglSetProjectionMatrix(perspective.arrayof.ptr);
         mglSetModelViewMatrix(mv.arrayof.ptr);
         
         time += timer.deltaTime;
         if (time >= 2.0f * PI) time = 0.0f;
         t = (sin(time * 4.0f) + 1.0f) * 0.5f;
         mglSetShaderParameter1f(0, t);
+        
+        mglEnable(MGL_FOG);
+        mglEnable(MGL_TEXTURE);
+        mglEnable(MGL_DEPTH_WRITE);
+        mglEnable(MGL_DEPTH_TEST);
         
         // Draw floors
         foreach(ref f; floors)
@@ -590,6 +620,22 @@ void main()
                 mv = mvPrev;
             }
         }
+        
+        // Draw HUD
+        /*
+        mglDisable(MGL_BLEND);
+        mglDisable(MGL_DEPTH_TEST);
+        mglDisable(MGL_DEPTH_WRITE);
+        mglDisable(MGL_TEXTURE);
+        mglDisable(MGL_FOG);
+        mglSetProjectionMatrix(ortho.arrayof.ptr);
+        mv = translationMatrix(Vector3f(0.0f, 0.0f, 0.0f));
+        mv *= scaleMatrix(Vector3f(50.0f, 50.0f, 10.0f));
+        mglSetModelViewMatrix(mv.arrayof.ptr);
+        mglBindVertexBuffer(vbQuad);
+        mglDrawVertexBuffer();
+        mglBindVertexBuffer(0);
+        */
         
         mglBlitFrameBuffer(fbScaled, 0);
         
