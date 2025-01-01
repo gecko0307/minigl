@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2022 Timur Gafarov
+Copyright (c) 2022-2024 Timur Gafarov
 
 Boost Software License - Version 1.0 - August 17th, 2003
 
@@ -83,6 +83,55 @@ struct LevelSegment
     float z;
     uint textureId;
     float angle;
+}
+
+struct LineSegment
+{
+    Vector2f a;
+    Vector2f b;
+}
+
+struct Collision
+{
+    Vector2f n;
+    float depth;
+    bool fact;
+}
+
+Vector2f closestPointOnSegment(Vector2f pos, LineSegment seg)
+{
+    auto tangent = seg.b - seg.a;
+    if (dot(pos - seg.a, tangent) <= 0)
+        return seg.a; // pos is before a on the line
+    
+    if (dot(pos - seg.b, tangent) >= 0)
+        return seg.b; // pos is after b on the line
+    
+    auto tangentNorm = tangent.normalized;
+    auto relativePos = pos - seg.a;
+    return seg.a + tangentNorm * (tangentNorm * relativePos);
+}
+
+Collision collideCircleWithSegment(Vector2f circleCenter, float circleRadius, LineSegment seg)
+{
+    auto delta = circleCenter - closestPointOnSegment(circleCenter, seg);
+
+    if (dot(delta, delta) > circleRadius * circleRadius)
+        return Collision(Vector2f(0.0f, 0.0f), 0.0f, false);
+
+    auto dist = delta.length;
+    auto collisionNormal = delta.normalized();
+    return Collision(collisionNormal, circleRadius - dist, true);
+}
+
+Collision checkCircleCollisionWithWall(Vector3f pos, float radius, ref LevelSegment segment)
+{
+    float eX = cos(degtorad(segment.angle));
+    float eY = sin(degtorad(segment.angle));
+    Vector2f segCenter = Vector3f(segment.x, segment.z);
+    Vector2f extent = Vector3f(eX * 0.5f, eY * 0.5f);
+    LineSegment lineSegment = LineSegment(segCenter - extent, segCenter + extent);
+    return collideCircleWithSegment(Vector2f(pos.x, pos.z), radius, lineSegment);
 }
 
 float clampf(float v, float mi, float ma)
@@ -330,8 +379,6 @@ void main()
         float time;
     };
     
-    //Vector3f fireballPosition = Vector3f(0.0f, -0.15f, 0.0f);
-    
     Vector3f fireballScale = Vector3f(0.5f, 0.5f, 0.5f);
     float fireballPosY = -0.05f;
     float fireballSpeed = 8.0f;
@@ -408,6 +455,7 @@ void main()
             running = false;
         }
         
+        // Mouse look
         float mouseRelH = (mouseX - prevMouseX) * mouseSensibility;
         float mouseRelV = (mouseY - prevMouseY) * mouseSensibility;
         pitch += mouseRelV;
@@ -432,10 +480,22 @@ void main()
             invViewOrientationMatrix;
         auto mv = cameraMatrix.inverse;
         
+        // Movement controls
         if (keyPressed[KEY_W]) camPos += -turnMatrix.forward  * 2.0f * timer.deltaTime;
         if (keyPressed[KEY_S]) camPos += turnMatrix.forward * 2.0f * timer.deltaTime;
         if (keyPressed[KEY_A]) camPos += -turnMatrix.right  * 2.0f * timer.deltaTime;
         if (keyPressed[KEY_D]) camPos += turnMatrix.right  * 2.0f * timer.deltaTime;
+        
+        // Collision detection with walls
+        foreach(ref wall; walls)
+        {
+            Collision col = checkCircleCollisionWithWall(camPos, 0.4f, wall);
+            if (col.fact)
+            {
+                Vector2f v = col.n * col.depth;
+                camPos += Vector3f(v.x, 0.0f, v.y);
+            }
+        }
         
         mglClearColor(0.2f, 0.1f, 0.2f, 1.0);
         mglClearDepth(1.0);
@@ -447,6 +507,7 @@ void main()
         t = (sin(time * 4.0f) + 1.0f) * 0.5f;
         mglSetShaderParameter1f(0, t);
         
+        // Draw floors
         foreach(ref f; floors)
         {
             auto mvPrev = mv;
@@ -454,14 +515,13 @@ void main()
             mglSetModelViewMatrix(mv.arrayof.ptr);
             mglBindTexture(0, f.textureId);
             mglBindVertexBuffer(vbFloor);
-            mglBindPixelShader(&psRed);
             mglDrawVertexBuffer();
-            mglBindPixelShader(null);
             mglBindVertexBuffer(0);
             mglBindTexture(0, 0);
             mv = mvPrev;
         }
         
+        // Draw ceilings
         foreach(ref c; ceilings)
         {
             auto mvPrev = mv;
@@ -475,6 +535,7 @@ void main()
             mv = mvPrev;
         }
         
+        // Draw walls
         foreach(ref w; walls)
         {
             auto mvPrev = mv;
@@ -489,6 +550,7 @@ void main()
             mv = mvPrev;
         }
         
+        // Draw fireballs
         foreach(ref f; fireballs)
         {
             if (f.visible)
