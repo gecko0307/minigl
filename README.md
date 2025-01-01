@@ -13,6 +13,8 @@ mglBindVertexBuffer(vb);
 mglDrawVertexBuffer();
 ```
 
+An example game provided with first person corridor shooter mechanics.
+
 [![Screenshot1](https://github.com/gecko0307/minigl/raw/main/assets/screenshot.jpg)](https://github.com/gecko0307/minigl/raw/main/assets/screenshot.jpg)
 
 ## Features
@@ -30,4 +32,4 @@ mglDrawVertexBuffer();
 - Shader-based multitexturing, 32 texture units per pass
 - User-defined frame buffers
 
-No fancy-schmancy modern features like mipmapping or lights 🤣 But they can be implemented on user side, of course.
+No fancy-schmancy modern features like mipmapping or lights 😅 But they can be implemented on user side, of course.
