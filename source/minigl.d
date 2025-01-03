@@ -682,36 +682,37 @@ struct MGLState
         Vector3f c2 = cs2.xyz;
         Vector3f c3 = cs3.xyz;
 
-        if (cs1.w < 0.01f) cs1.w = 0.01f;
-        if (cs2.w < 0.01f) cs2.w = 0.01f;
-        if (cs3.w < 0.01f) cs3.w = 0.01f;
+        if (cs1.w < 0.005f) cs1.w = 0.005f;
+        if (cs2.w < 0.005f) cs2.w = 0.005f;
+        if (cs3.w < 0.005f) cs3.w = 0.005f;
 
         Vector3f ndc1 = c1 / cs1.w;
         Vector3f ndc2 = c2 / cs2.w;
         Vector3f ndc3 = c3 / cs3.w;
 
-        Vector3f w1 = viewportCoord(ndc1, fbCurrent.width, fbCurrent.height, znear, zfar);
-        Vector3f w2 = viewportCoord(ndc2, fbCurrent.width, fbCurrent.height, znear, zfar);
-        Vector3f w3 = viewportCoord(ndc3, fbCurrent.width, fbCurrent.height, znear, zfar);
+        Vector3f vc1 = viewportCoord(ndc1, fbCurrent.width, fbCurrent.height, znear, zfar);
+        Vector3f vc2 = viewportCoord(ndc2, fbCurrent.width, fbCurrent.height, znear, zfar);
+        Vector3f vc3 = viewportCoord(ndc3, fbCurrent.width, fbCurrent.height, znear, zfar);
 
+        // Rounding, to eliminate gaps between edges
         Vector3f[3] pts;
-        pts[0] = Vector3f(floor(w1.x), floor(w1.y), w1.z);
-        pts[1] = Vector3f(floor(w2.x), floor(w2.y), w2.z);
-        pts[2] = Vector3f(floor(w3.x), floor(w3.y), w3.z);
+        pts[0] = Vector3f(floor(vc1.x), floor(vc1.y), vc1.z);
+        pts[1] = Vector3f(floor(vc2.x), floor(vc2.y), vc2.z);
+        pts[2] = Vector3f(floor(vc3.x), floor(vc3.y), vc3.z);
 
         float[3] clipw;
         clipw[0] = cs1.w;
         clipw[1] = cs2.w;
         clipw[2] = cs3.w;
  
-        Vector2f bboxmin = Vector2f(fbCurrent.width-1, fbCurrent.height-1); 
-        Vector2f bboxmax = Vector2f(0, 0); 
-        Vector2f clamped = Vector2f(fbCurrent.width-1, fbCurrent.height-1); 
+        Vector2f bboxmin = Vector2f(fbCurrent.width-1, fbCurrent.height-1);
+        Vector2f bboxmax = Vector2f(0, 0);
+        Vector2f clamped = Vector2f(fbCurrent.width-1, fbCurrent.height-1);
         for (int i=0; i<3; i++) 
         for (int j=0; j<2; j++)
         { 
-            bboxmin[j] = max2(0,          min2(bboxmin[j], pts[i][j])); 
-            bboxmax[j] = min2(clamped[j], max2(bboxmax[j], pts[i][j])); 
+            bboxmin[j] = max2(0,          min2(bboxmin[j], pts[i][j]));
+            bboxmax[j] = min2(clamped[j], max2(bboxmax[j], pts[i][j]));
         } 
 
         float px, py, pz, pw;
@@ -728,8 +729,8 @@ struct MGLState
         tcs[1] /= clipw[1];
         tcs[2] /= clipw[2];
     
-        for (px=bboxmin.x; px<=bboxmax.x; px++)
-        for (py=bboxmin.y; py<=bboxmax.y; py++)
+        for (px = bboxmin.x; px <= bboxmax.x; px++)
+        for (py = bboxmin.y; py <= bboxmax.y; py++)
         {
             Vector3f bc = barycentric(pts, Vector3f(px, py, pz));
             if (bc.x < 0 || bc.y < 0 || bc.z < 0)
@@ -742,7 +743,7 @@ struct MGLState
             u = 0.0f;
             v = 0.0f;
             iw = 0.0f;
-            for (uint i=0; i<3; i++)
+            for (uint i = 0; i < 3; i++)
             {
                 pz += pts[i][2] * bc[i];
                 u += tcs[i][0] * bc[i];
@@ -777,7 +778,7 @@ struct MGLState
                 if (options[MGL_DEPTH_WRITE])
                     fbSetPixelDepth(fbCurrent, xcoord, ycoord, pz);
             }
-        } 
+        }
     } 
 }
 

@@ -263,8 +263,8 @@ void main()
     float[] vertsQuad = [
         0.0, 0.0, 0.0,
         1.0, 0.0, 0.0,
-        1.0, 1.0, 0.0,
-        0.0, 1.0, 0.0
+        1.0, -1.0, 0.0,
+        0.0, -1.0, 0.0
     ];
     float[] texsQuad = [
         0.0, 0.0,
@@ -298,6 +298,10 @@ void main()
     auto img3 = loadPNG("textures/fireball.png");
     uint texFireball = mglAddTexture();
     mglSetTextureData(texFireball, img3.data.ptr, img3.width, img3.height, img3.channels);
+    
+    auto img4 = loadPNG("textures/hand.png");
+    uint texHand = mglAddTexture();
+    mglSetTextureData(texHand, img4.data.ptr, img4.width, img4.height, img4.channels);
 
     mglSetClipPlanes(0.0f, 5.0f);
     mglEnable(MGL_TEXTURE);
@@ -404,7 +408,7 @@ void main()
     };
     
     Vector3f fireballScale = Vector3f(0.5f, 0.5f, 0.5f);
-    float fireballPosY = -0.05f;
+    float fireballPosY = -0.08f;
     float fireballSpeed = 8.0f;
     float fireballLifetime = 1.5f;
     
@@ -416,13 +420,14 @@ void main()
         { position: Vector3f(0.0f, fireballPosY, 0.0f), velocity: Vector3f(0.0f, 0.0f, 0.0f), visible: false, time: 0.0f }
     ];
     
-    void fire(Vector3f camDir)
+    void fire(Vector3f camDir, Vector3f camRight)
     {
         foreach(ref f; fireballs)
         {
             if (!f.visible)
             {
                 f.position = camPos;
+                f.position += camRight * 0.1f - camDir * 0.25f;
                 f.position.y = fireballPosY;
                 f.visible = true;
                 f.time = 0.0f;
@@ -437,6 +442,12 @@ void main()
     Quaternionf cameraOrientation = Quaternionf.identity;
     Quaternionf cameraOrientationX = Quaternionf.identity;
     Quaternionf cameraOrientationY = Quaternionf.identity;
+    
+    bool moving = false;
+    bool attacking = false;
+    float swayTime = 0.0f;
+    float sway = 0.0f;
+    float attackTimer = 0.0f;
     
     SDL_ShowCursor(0);
     
@@ -470,7 +481,10 @@ void main()
             }
             else if (e.type == SDL_MOUSEBUTTONDOWN)
             {
-                fire(cameraOrientationY.rotate(Vector3f(0.0f, 0.0f, 1.0f)));
+                fire(
+                    cameraOrientationY.rotate(Vector3f(0.0f, 0.0f, 1.0f)),
+                    cameraOrientationY.rotate(Vector3f(1.0f, 0.0f, 0.0f)));
+                attacking = true;
             }
         }
         
@@ -507,10 +521,11 @@ void main()
         auto mv = cameraMatrix.inverse;
         
         // Movement controls
-        if (keyPressed[KEY_W]) camPos += -turnMatrix.forward  * 1.5f * timer.deltaTime;
-        if (keyPressed[KEY_S]) camPos += turnMatrix.forward * 1.5f * timer.deltaTime;
-        if (keyPressed[KEY_A]) camPos += -turnMatrix.right  * 1.5f * timer.deltaTime;
-        if (keyPressed[KEY_D]) camPos += turnMatrix.right  * 1.5f * timer.deltaTime;
+        moving = false;
+        if (keyPressed[KEY_W]) { moving = true; camPos += -turnMatrix.forward  * 1.5f * timer.deltaTime; }
+        if (keyPressed[KEY_S]) { moving = true; camPos += turnMatrix.forward * 1.5f * timer.deltaTime; }
+        if (keyPressed[KEY_A]) { moving = true; camPos += -turnMatrix.right  * 1.5f * timer.deltaTime; }
+        if (keyPressed[KEY_D]) { moving = true; camPos += turnMatrix.right  * 1.5f * timer.deltaTime; }
         
         // Collision detection with walls
         foreach(ref wall; walls)
@@ -621,21 +636,45 @@ void main()
             }
         }
         
+        if (moving)
+        {
+            swayTime += timer.deltaTime;
+            if (swayTime >= 2.0f * PI) swayTime = 0.0f;
+        }
+        
+        sway = -10.0f - sin(swayTime * 8.0f) * 10.0f;
+        
+        if (attacking)
+        {
+            attackTimer += timer.deltaTime;
+            if (attackTimer > 0.15f) {
+                attackTimer = 0.15f;
+                attacking = false;
+            }
+        }
+        else
+        {
+            attackTimer -= timer.deltaTime;
+            if (attackTimer < 0.0f)
+                attackTimer = 0.0f;
+        }
+        
+        float handLookPitch = lerp(0.0f, -180.0f, -clampf(pitch, -45.0f, 0.0f) / 45.0f);
+        float handAttackPitch = -30.0f + lerp(0.0f, 30.0f, attackTimer / 0.15f);
+        
         // Draw HUD
-        /*
-        mglDisable(MGL_BLEND);
+        mglEnable(MGL_BLEND);
         mglDisable(MGL_DEPTH_TEST);
         mglDisable(MGL_DEPTH_WRITE);
-        mglDisable(MGL_TEXTURE);
         mglDisable(MGL_FOG);
+        mglBindTexture(0, texHand);
         mglSetProjectionMatrix(ortho.arrayof.ptr);
-        mv = translationMatrix(Vector3f(0.0f, 0.0f, 0.0f));
-        mv *= scaleMatrix(Vector3f(50.0f, 50.0f, 10.0f));
+        mv = translationMatrix(Vector3f(64.0f, 256.0f + sway + handLookPitch + handAttackPitch, 0.0f));
+        mv *= scaleMatrix(Vector3f(256.0f, 256.0f, 10.0f));
         mglSetModelViewMatrix(mv.arrayof.ptr);
         mglBindVertexBuffer(vbQuad);
         mglDrawVertexBuffer();
         mglBindVertexBuffer(0);
-        */
         
         mglBlitFrameBuffer(fbScaled, 0);
         
