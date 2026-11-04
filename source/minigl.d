@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2022 Timur Gafarov
+Copyright (c) 2022-2026 Timur Gafarov
 
 Boost Software License - Version 1.0 - August 17th, 2003
 
@@ -27,8 +27,8 @@ DEALINGS IN THE SOFTWARE.
 */
 module minigl;
 
-import std.math;
 import dlib.core.memory;
+import dlib.math.base;
 import dlib.math.vector;
 import dlib.math.matrix;
 import dlib.math.interpolation;

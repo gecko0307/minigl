@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2022-2024 Timur Gafarov
+Copyright (c) 2022-2026 Timur Gafarov
 
 Boost Software License - Version 1.0 - August 17th, 2003
 
@@ -30,8 +30,8 @@ module main;
 import std.stdio;
 import std.conv;
 import std.string;
-import std.math;
 import dlib.math;
+import dlib.math.base;
 import dlib.image;
 
 import minigl;
